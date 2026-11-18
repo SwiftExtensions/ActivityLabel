@@ -324,11 +324,10 @@ open class LabelView: UIStackView {
             self.image = image
             self.title = title
             self.contentView.resetAppearance()
-            self.contentView.alpha = 0.0
-            self.alpha = 1.0
+            self.alpha = 0.0
+            self.isHidden = false
             UIView.animate(withDuration: 0.35) {
-                self.isHidden = false
-                self.contentView.alpha = 1.0
+                self.alpha = 1.0
             }
         } else {
             self.replaceContent(with: image, title: title)
