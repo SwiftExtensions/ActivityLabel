@@ -235,9 +235,14 @@ open class LabelView: UIStackView {
      Запускает анимацию ``activityView`` и отображает метку.
      */
     public func startActivityAnimating() {
+        if self.activityView.isAnimating { return }
+        
         self.isHidden = false
-        self.activityView.alpha = 1.0
+        self.activityView.alpha = 0.0
         self.activityView.startAnimating()
+        UIView.animate(withDuration: 0.25) {
+            self.activityView.alpha = 1.0
+        }
     }
     /**
      Останавливает анимацию ``activityView``.
@@ -324,12 +329,16 @@ open class LabelView: UIStackView {
     private func replaceContent(with image: UIImage?, title: String?) {
         UIView.animate(withDuration: 0.3) {
             self.contentView.alpha = 0.0
+            self.contentView.transform = CGAffineTransform(
+                scaleX: 0.75,
+                y: 0.75
+            )
         } completion: { finished in
             guard finished else { return }
             self.contentView.image = image
             self.contentView.title = title
             UIView.animate(withDuration: 0.35) {
-                self.contentView.alpha = 1.0
+                self.contentView.resetAppearance()
             }
         }
     }
