@@ -299,6 +299,9 @@ open class LabelView: UIStackView {
         self.insertArrangedSubview(activityView, at: 0)
 
         let contentView = LabelContentView()
+        // Содержимого пока нет: скрыто, пока не появятся
+        // изображение или текст.
+        contentView.isHidden = true
         self.contentView = contentView
         self.addArrangedSubview(contentView)
     }
@@ -523,6 +526,10 @@ open class LabelView: UIStackView {
     ) {
         if self.isActivityAnimating {
             UIView.animate(withDuration: self.animationDuration) {
+                // Восстановление видимости метки, если её
+                // прозрачность гасится незавершённым скрытием.
+                self.alpha = 1.0
+                self.transform = .identity
                 self.contentView.alpha = 0.0
                 self.contentView.transform = self.scaleTransform
             } completion: { finished in
