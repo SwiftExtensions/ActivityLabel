@@ -398,7 +398,6 @@ open class LabelView: UIStackView {
 
         UIView.animate(withDuration: 0.25) {
             self.alpha = 0.0
-            self.transform = self.scaleTransform
         } completion: { _ in
             self.isHidden = true
             self.alpha = 1.0
