@@ -71,6 +71,7 @@ final class ViewController: UIViewController {
             bottom:   16.0,
             trailing: 16.0
         )
+        labelView.layer.cornerCurve = .continuous
         labelView.layer.cornerRadius = 12.0
         labelView.layer.borderColor = UIColor.systemGray3.cgColor
         labelView.layer.borderWidth = 1.0
