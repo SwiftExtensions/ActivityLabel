@@ -86,7 +86,7 @@ open class LabelView: UIStackView {
     public var image: UIImage? {
         get { self.imageView.image }
         set {
-            self.imageView.image = newValue
+            self.contentView.image = newValue
             self.contentView.isHidden = newValue == nil && self.title.isEmpty
         }
     }
@@ -109,7 +109,7 @@ open class LabelView: UIStackView {
     public var title: String? {
         get { self.label.text }
         set {
-            self.label.text = newValue
+            self.contentView.title = newValue
             self.contentView.isHidden = newValue.isEmpty && self.image == nil
         }
     }
@@ -166,6 +166,12 @@ open class LabelView: UIStackView {
             self.directionalLayoutMargins = newValue
             self.isLayoutMarginsRelativeArrangement = true
         }
+    }
+    /**
+     Признак запущенной анимации индикатора загрузки ``activityView``.
+     */
+    public var isActivityAnimating: Bool {
+        self.activityView.isAnimating
     }
     
     /**
@@ -314,17 +320,20 @@ open class LabelView: UIStackView {
         guard animated else {
             self.image = image
             self.title = title
-            self.contentView.resetAppearance()
-            self.alpha = 1.0
             self.isHidden = false
             return
         }
 
         if self.isHidden {
+            self.alpha = 0.0
             self.image = image
             self.title = title
-            self.contentView.resetAppearance()
-            self.alpha = 0.0
+            // Нет контента, выходим
+            if self.contentView.isHidden {
+                self.alpha = 1.0
+                return
+            }
+            
             self.isHidden = false
             UIView.animate(withDuration: 0.35) {
                 self.alpha = 1.0
@@ -360,15 +369,34 @@ open class LabelView: UIStackView {
      устанавливаются новые и проявляются.
      */
     private func replaceContent(with image: UIImage?, title: String?) {
-        UIView.animate(withDuration: 0.3) {
-            self.contentView.alpha = 0.0
-            self.contentView.transform = self.scaleTransform
-        } completion: { finished in
-            guard finished else { return }
-            self.image = image
-            self.title = title
-            UIView.animate(withDuration: 0.35) {
-                self.contentView.resetAppearance()
+        if self.isActivityAnimating {
+            UIView.animate(withDuration: 0.3) {
+                self.contentView.alpha = 0.0
+                self.contentView.transform = self.scaleTransform
+            } completion: { finished in
+                guard finished else { return }
+                UIView.animate(withDuration: 0.35) {
+                    self.image = image
+                    self.title = title
+                    self.layoutIfNeeded()
+                } completion: { _ in
+                    UIView.animate(withDuration: 0.35) {
+                        self.contentView.resetAppearance()
+                    }
+                }
+            }
+        } else {
+            UIView.animate(withDuration: 0.3) {
+                self.alpha = 0.0
+                self.transform = self.scaleTransform
+            } completion: { finished in
+                guard finished else { return }
+                self.image = image
+                self.title = title
+                UIView.animate(withDuration: 0.35) {
+                    self.alpha = 1.0
+                    self.transform = .identity
+                }
             }
         }
     }
@@ -384,7 +412,6 @@ open class LabelView: UIStackView {
     public func hide(animated: Bool = false) {
         guard animated else {
             self.clear()
-            self.contentView.resetAppearance()
             self.activityView.stopAnimating()
             self.isHidden = true
             return
@@ -401,9 +428,6 @@ open class LabelView: UIStackView {
             self.isHidden = true
             self.alpha = 1.0
             self.clear()
-            self.contentView.resetAppearance()
-            // Индикатор останавливается после скрытия метки,
-            // чтобы схлопывание места не было видно.
             self.activityView.stopAnimating()
         }
     }
