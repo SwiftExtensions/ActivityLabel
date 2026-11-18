@@ -11,8 +11,8 @@ extension Optional where Wrapped == String {
      */
     var isEmpty: Bool {
         let isEmpty: Bool
-        if case let .some(wrapped) = self {
-            isEmpty = wrapped.isEmpty
+        if case let .some(string) = self {
+            isEmpty = string.isEmpty
         } else {
             isEmpty = true
         }
