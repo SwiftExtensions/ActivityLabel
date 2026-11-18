@@ -247,11 +247,22 @@ open class LabelView: UIStackView {
     public func startActivityAnimating() {
         if self.activityView.isAnimating { return }
         
-        self.isHidden = false
-        self.activityView.alpha = 0.0
-        self.activityView.startAnimating()
-        UIView.animate(withDuration: 0.25) {
-            self.activityView.alpha = 1.0
+        if self.contentView.isHidden {
+            self.isHidden = false
+            self.alpha = 0.0
+            self.activityView.startAnimating()
+            UIView.animate(withDuration: 0.25) {
+                self.alpha = 1.0
+            }
+        } else {
+            self.activityView.alpha = 0.0
+            UIView.animate(withDuration: 0.25) {
+                self.activityView.startAnimating()
+            } completion: { _ in
+                UIView.animate(withDuration: 0.25) {
+                    self.activityView.alpha = 1.0
+                }
+            }
         }
     }
     /**
@@ -263,11 +274,24 @@ open class LabelView: UIStackView {
     public func stopActivityAnimating() {
         guard self.activityView.isAnimating else { return }
 
-        UIView.animate(withDuration: 0.25) {
-            self.activityView.alpha = 0.0
-        } completion: { _ in
-            self.activityView.stopAnimating()
-            self.activityView.alpha = 1.0
+        if self.contentView.isHidden {
+            UIView.animate(withDuration: 0.25) {
+                self.alpha = 0.0
+            } completion: { _ in
+                self.activityView.stopAnimating()
+                self.isHidden = true
+                self.alpha = 1.0
+            }
+        } else {
+            UIView.animate(withDuration: 0.25) {
+                self.activityView.alpha = 0.0
+            } completion: { _ in
+                UIView.animate(withDuration: 0.25) {
+                    self.activityView.stopAnimating()
+                } completion: { _ in
+                    self.activityView.alpha = 1.0
+                }
+            }
         }
     }
     /**
