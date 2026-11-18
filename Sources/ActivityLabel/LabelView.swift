@@ -250,8 +250,8 @@ open class LabelView: UIStackView {
     public convenience init(image: UIImage?, title: String?) {
         self.init(frame: .zero)
 
-        self.contentView.image = image
-        self.contentView.title = title
+        self.image = image
+        self.title = title
     }
     /**
      Создает экземпляр `LabelView` с изображением и заголовком.
