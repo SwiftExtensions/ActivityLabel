@@ -66,11 +66,14 @@ final class ViewController: UIViewController {
         labelView.imageContentMode = .scaleAspectFit
         labelView.spacing = 8
         labelView.directionalContentInsets = NSDirectionalEdgeInsets(
-            top: 12,
-            leading: 16,
-            bottom: 12,
-            trailing: 16
+            top:      16.0,
+            leading:  16.0,
+            bottom:   16.0,
+            trailing: 16.0
         )
+        labelView.layer.cornerRadius = 12.0
+        labelView.layer.borderColor = UIColor.systemGray3.cgColor
+        labelView.layer.borderWidth = 1.0
 
         labelView.translatesAutoresizingMaskIntoConstraints = false
         self.view.addSubview(labelView)

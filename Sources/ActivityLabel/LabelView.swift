@@ -85,7 +85,10 @@ open class LabelView: UIStackView {
      */
     public var image: UIImage? {
         get { self.imageView.image }
-        set { self.imageView.image = newValue }
+        set {
+            self.imageView.image = newValue
+            self.contentView.isHidden = newValue == nil && self.title.isEmpty
+        }
     }
     /**
      Режим отображения содержимого изображения.
@@ -105,7 +108,10 @@ open class LabelView: UIStackView {
      */
     public var title: String? {
         get { self.label.text }
-        set { self.label.text = newValue }
+        set {
+            self.label.text = newValue
+            self.contentView.isHidden = newValue.isEmpty && self.image == nil
+        }
     }
     /**
      Цвет текста метки.
@@ -278,8 +284,8 @@ open class LabelView: UIStackView {
         animated: Bool = false
     ) {
         guard animated else {
-            self.contentView.image = image
-            self.contentView.title = title
+            self.image = image
+            self.title = title
             self.contentView.resetAppearance()
             self.alpha = 1.0
             self.isHidden = false
@@ -287,8 +293,8 @@ open class LabelView: UIStackView {
         }
 
         if self.isHidden {
-            self.contentView.image = image
-            self.contentView.title = title
+            self.image = image
+            self.title = title
             self.contentView.resetAppearance()
             self.contentView.alpha = 0.0
             self.alpha = 1.0
@@ -335,8 +341,8 @@ open class LabelView: UIStackView {
             )
         } completion: { finished in
             guard finished else { return }
-            self.contentView.image = image
-            self.contentView.title = title
+            self.image = image
+            self.title = title
             UIView.animate(withDuration: 0.35) {
                 self.contentView.resetAppearance()
             }
@@ -353,7 +359,7 @@ open class LabelView: UIStackView {
      */
     public func hide(animated: Bool = false) {
         guard animated else {
-            self.contentView.clear()
+            self.clear()
             self.contentView.resetAppearance()
             self.activityView.stopAnimating()
             self.isHidden = true
@@ -374,7 +380,7 @@ open class LabelView: UIStackView {
         } completion: { _ in
             self.isHidden = true
             self.alpha = 1.0
-            self.contentView.clear()
+            self.clear()
             self.contentView.resetAppearance()
             // Индикатор останавливается после скрытия метки,
             // чтобы схлопывание места не было видно.
@@ -387,7 +393,8 @@ open class LabelView: UIStackView {
      Сбрасывает изображение и текст.
      */
     public func clear() {
-        self.contentView.clear()
+        self.title = nil
+        self.image = nil
     }
 
 

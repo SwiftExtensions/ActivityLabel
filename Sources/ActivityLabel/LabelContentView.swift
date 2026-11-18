@@ -41,7 +41,7 @@ class LabelContentView: UIStackView {
         get { self.label.text }
         set {
             self.label.text = newValue
-            self.label.isHidden = newValue == nil
+            self.label.isHidden = newValue.isEmpty
         }
     }
 
