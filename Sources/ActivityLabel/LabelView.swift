@@ -43,9 +43,17 @@ import UIKit
  - `font` - шрифт текста
  - `imageContentMode` - режим отображения изображения
  - `directionalContentInsets` - внутренние отступы содержимого
+ - `background` - конфигурация фона метки
  - `activityView` - индикатор загрузки
  */
 open class LabelView: UIStackView {
+    /**
+     Класс слоя метки — `CALayer` вместо `CATransformLayer` `UIStackView`.
+
+     Замена позволяет слою рисовать оформление ``background``:
+     цвет фона, скругление углов, обводку и тень.
+     */
+    open override class var layerClass: AnyClass { CALayer.self }
     /**
      Индикатор загрузки `UIActivityIndicatorView`, встроенный в метку.
 
@@ -168,6 +176,29 @@ open class LabelView: UIStackView {
         }
     }
     /**
+     Конфигурация фона метки.
+
+     Настройки применяются напрямую к ``layer``: цвет фона,
+     скругление углов, обводка и тень. Значение `nil`
+     сбрасывает оформление фона. Изменения анимируются
+     внутри `UIView.animate`.
+
+     `backgroundInsets`, `visualEffect`, `image`
+     и `customView` не поддерживаются.
+
+     ## Пример использования:
+
+     ```swift
+     var background = UIBackgroundConfiguration.clear()
+     background.backgroundColor = .secondarySystemFill
+     background.cornerRadius = 12.0
+     labelView.background = background
+     ```
+     */
+    public var background: UIBackgroundConfiguration? {
+        didSet { self.updateBackground() }
+    }
+    /**
      Признак запущенной анимации индикатора загрузки ``activityView``.
      */
     public var isActivityAnimating: Bool {
@@ -178,6 +209,14 @@ open class LabelView: UIStackView {
      Стек содержимого из изображения и текста.
      */
     private(set) var contentView: LabelContentView!
+    /**
+     Цвет обводки фона для обновления при смене цветовой схемы.
+     */
+    private var strokeColor: UIColor?
+    /**
+     Цвет тени фона для обновления при смене цветовой схемы.
+     */
+    private var shadowColor: UIColor?
     /**
      Трансформер масштаба.
      */
@@ -262,6 +301,66 @@ open class LabelView: UIStackView {
         let contentView = LabelContentView()
         self.contentView = contentView
         self.addArrangedSubview(contentView)
+    }
+    /**
+     Применяет конфигурацию ``background`` к ``layer``.
+     */
+    private func updateBackground() {
+        guard let configuration = self.background else {
+            self.backgroundColor = nil
+            self.layer.cornerRadius = 0.0
+            self.layer.borderWidth = 0.0
+            self.layer.shadowOpacity = 0.0
+            self.strokeColor = nil
+            self.shadowColor = nil
+            self.updateStrokeColor()
+            self.updateShadowColor()
+            return
+        }
+        
+        self.backgroundColor = configuration.resolvedBackgroundColor(for: self.tintColor)
+        self.layer.cornerRadius = configuration.cornerRadius
+        self.layer.borderWidth = configuration.strokeWidth
+        self.strokeColor = configuration.strokeColor.map { _ in
+            configuration.resolvedStrokeColor(for: self.tintColor)
+        }
+        if #available(iOS 18.0, *) {
+            let shadow = configuration.shadowProperties
+            self.shadowColor = shadow.color
+            self.layer.shadowOpacity = Float(shadow.opacity)
+            self.layer.shadowRadius = shadow.radius
+            self.layer.shadowOffset = shadow.offset
+            self.layer.shadowPath = shadow.path?.cgPath
+        }
+        self.updateStrokeColor()
+        self.updateShadowColor()
+    }
+    /**
+     Обновляет цвет обводки слоя с учётом текущей цветовой схемы.
+     */
+    private func updateStrokeColor() {
+        self.layer.borderColor = self.strokeColor?
+            .resolvedColor(with: self.traitCollection).cgColor
+    }
+    /**
+     Обновляет цвет тени слоя с учётом текущей цветовой схемы.
+     */
+    private func updateShadowColor() {
+        self.layer.shadowColor = self.shadowColor?
+            .resolvedColor(with: self.traitCollection).cgColor
+    }
+    /**
+     Обновляет цвета обводки и тени при смене цветовой схемы.
+
+     - Parameter previousTraitCollection: Предыдущий набор признаков среды.
+     */
+    open override func traitCollectionDidChange(_ previousTraitCollection: UITraitCollection?) {
+        super.traitCollectionDidChange(previousTraitCollection)
+
+        if self.traitCollection.hasDifferentColorAppearance(comparedTo: previousTraitCollection) {
+            self.updateStrokeColor()
+            self.updateShadowColor()
+        }
     }
     /**
      Начинает новую последовательность анимаций.

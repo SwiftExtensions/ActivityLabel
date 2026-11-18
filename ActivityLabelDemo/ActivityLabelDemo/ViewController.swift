@@ -31,6 +31,22 @@ final class ViewController: UIViewController {
      */
     private let animatedSwitch = UISwitch()
     /**
+     Переключатель отображения фона метки.
+     */
+    private let backgroundSwitch = UISwitch()
+    /**
+     Конфигурация фона `LabelView`.
+     */
+    private var labelBackgroundConfiguration: UIBackgroundConfiguration = {
+        var background = UIBackgroundConfiguration.clear()
+        background.backgroundColor = .secondarySystemFill
+        background.cornerRadius = 12.0
+        background.strokeColor = .systemGray3
+        background.strokeWidth = 1.0
+        
+        return background
+    }()
+    /**
      Индекс текущего варианта содержимого.
      */
     private var contentIndex = 0
@@ -71,10 +87,7 @@ final class ViewController: UIViewController {
             bottom:   16.0,
             trailing: 16.0
         )
-        labelView.layer.cornerCurve = .continuous
-        labelView.layer.cornerRadius = 12.0
-        labelView.layer.borderColor = UIColor.systemGray3.cgColor
-        labelView.layer.borderWidth = 1.0
+        labelView.background = self.labelBackgroundConfiguration
 
         labelView.translatesAutoresizingMaskIntoConstraints = false
         self.view.addSubview(labelView)
@@ -90,6 +103,7 @@ final class ViewController: UIViewController {
      */
     private func setupControls() {
         let animatedRow = self.makeAnimatedRow()
+        let backgroundRow = self.makeBackgroundRow()
         let showHideRow = self.makeRow(
             self.makeButton(title: "Показать", action: #selector(self.showLabel)),
             self.makeButton(title: "Скрыть", action: #selector(self.hideLabel))
@@ -105,6 +119,7 @@ final class ViewController: UIViewController {
 
         let stackView = UIStackView(arrangedSubviews: [
             animatedRow,
+            backgroundRow,
             showHideRow,
             activityRow,
             contentButton
@@ -144,6 +159,27 @@ final class ViewController: UIViewController {
         row.alignment = .center
         self.animatedSwitch.isOn = true
         self.animatedSwitch.setContentHuggingPriority(.required, for: .horizontal)
+        return row
+    }
+    /**
+     Создает строку с переключателем фона метки.
+     - Returns: Строка с подписью и `UISwitch`.
+     */
+    private func makeBackgroundRow() -> UIStackView {
+        let titleLabel = UILabel()
+        titleLabel.text = "Фон"
+        titleLabel.font = .systemFont(ofSize: 16)
+
+        let row = UIStackView(arrangedSubviews: [titleLabel, self.backgroundSwitch])
+        row.spacing = 8
+        row.alignment = .center
+        self.backgroundSwitch.isOn = true
+        self.backgroundSwitch.setContentHuggingPriority(.required, for: .horizontal)
+        self.backgroundSwitch.addTarget(
+            self,
+            action: #selector(self.toggleBackground),
+            for: .valueChanged
+        )
         return row
     }
     /**
@@ -187,6 +223,14 @@ final class ViewController: UIViewController {
         return button
     }
 
+    /**
+     Включает или отключает фон метки.
+     */
+    @objc private func toggleBackground() {
+        self.labelView.background = self.backgroundSwitch.isOn
+            ? self.labelBackgroundConfiguration
+            : nil
+    }
     /**
      Отображает метку с текущим содержимым.
      */

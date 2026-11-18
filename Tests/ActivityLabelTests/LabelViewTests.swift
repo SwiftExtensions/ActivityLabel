@@ -36,6 +36,29 @@ final class LabelViewTests: XCTestCase {
         XCTAssertEqual(labelView.directionalContentInsets, insets)
         XCTAssertTrue(labelView.isLayoutMarginsRelativeArrangement)
     }
+    /**
+     Проверяет включение и отключение фона метки.
+     */
+    func testBackgroundEnablesAndDisables() {
+        let labelView = LabelView()
+
+        XCTAssertNil(labelView.background)
+
+        var background = UIBackgroundConfiguration.clear()
+        background.backgroundColor = .secondarySystemFill
+        background.cornerRadius = 12.0
+        labelView.background = background
+
+        XCTAssertEqual(labelView.backgroundColor, .secondarySystemFill)
+        XCTAssertEqual(labelView.layer.cornerRadius, 12.0)
+        XCTAssertEqual(labelView.background, background)
+
+        labelView.background = nil
+
+        XCTAssertNil(labelView.background)
+        XCTAssertNil(labelView.backgroundColor)
+        XCTAssertEqual(labelView.layer.cornerRadius, 0.0)
+    }
 
 
 }
