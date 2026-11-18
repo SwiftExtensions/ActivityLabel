@@ -182,6 +182,22 @@ open class LabelView: UIStackView {
      Трансформер масштаба.
      */
     private var scaleTransform = CGAffineTransform(scaleX: 0.75, y: 0.75)
+    /**
+     Длительность анимаций метки.
+
+     Применяется при отображении и скрытии, смене
+     содержимого, а также при запуске и остановке
+     ``activityView``. Значение по умолчанию — `0.3` секунды.
+     */
+    public var animationDuration: TimeInterval = 0.3
+    /**
+     Идентификатор текущей последовательности анимаций.
+
+     Увеличивается при каждой новой команде отображения,
+     чтобы обработчики завершения прерванных цепочек
+     не вмешивались в текущее состояние метки.
+     */
+    private var animationSequence = 0
 
     /**
      Создает экземпляр `LabelView` с изображением и заголовком.
@@ -248,24 +264,41 @@ open class LabelView: UIStackView {
         self.addArrangedSubview(contentView)
     }
     /**
+     Начинает новую последовательность анимаций.
+
+     Обработчики завершения предыдущей последовательности
+     перестают учитываться: проверка идентификатора
+     внутри `completion` не пройдёт.
+
+     - Returns: Идентификатор начатой последовательности.
+     */
+    private func beginAnimationSequence() -> Int {
+        self.animationSequence += 1
+        return self.animationSequence
+    }
+    /**
      Запускает анимацию ``activityView`` и отображает метку.
      */
     public func startActivityAnimating() {
-        if self.activityView.isAnimating { return }
-        
+        guard !self.activityView.isAnimating || self.activityView.alpha != 1.0 else { return }
+        let sequence = self.beginAnimationSequence()
+
         if self.contentView.isHidden {
             self.isHidden = false
             self.alpha = 0.0
+            self.transform = .identity
+            self.activityView.alpha = 1.0
             self.activityView.startAnimating()
-            UIView.animate(withDuration: 0.25) {
+            UIView.animate(withDuration: self.animationDuration) {
                 self.alpha = 1.0
             }
         } else {
             self.activityView.alpha = 0.0
-            UIView.animate(withDuration: 0.25) {
+            UIView.animate(withDuration: self.animationDuration) {
                 self.activityView.startAnimating()
-            } completion: { _ in
-                UIView.animate(withDuration: 0.25) {
+            } completion: { finished in
+                guard finished, sequence == self.animationSequence else { return }
+                UIView.animate(withDuration: self.animationDuration) {
                     self.activityView.alpha = 1.0
                 }
             }
@@ -279,22 +312,26 @@ open class LabelView: UIStackView {
      */
     public func stopActivityAnimating() {
         guard self.activityView.isAnimating else { return }
+        let sequence = self.beginAnimationSequence()
 
         if self.contentView.isHidden {
-            UIView.animate(withDuration: 0.25) {
+            UIView.animate(withDuration: self.animationDuration) {
                 self.alpha = 0.0
-            } completion: { _ in
+            } completion: { finished in
+                guard finished, sequence == self.animationSequence else { return }
                 self.activityView.stopAnimating()
                 self.isHidden = true
                 self.alpha = 1.0
             }
         } else {
-            UIView.animate(withDuration: 0.25) {
+            UIView.animate(withDuration: self.animationDuration) {
                 self.activityView.alpha = 0.0
-            } completion: { _ in
-                UIView.animate(withDuration: 0.25) {
+            } completion: { finished in
+                guard finished, sequence == self.animationSequence else { return }
+                UIView.animate(withDuration: self.animationDuration) {
                     self.activityView.stopAnimating()
-                } completion: { _ in
+                } completion: { finished in
+                    guard finished, sequence == self.animationSequence else { return }
                     self.activityView.alpha = 1.0
                 }
             }
@@ -317,29 +354,36 @@ open class LabelView: UIStackView {
         title: String?,
         animated: Bool = false
     ) {
+        let sequence = self.beginAnimationSequence()
+
         guard animated else {
             self.image = image
             self.title = title
+            self.contentView.resetAppearance()
+            self.alpha = 1.0
+            self.transform = .identity
             self.isHidden = false
             return
         }
 
         if self.isHidden {
             self.alpha = 0.0
+            self.transform = .identity
             self.isHidden = false
             self.image = image
             self.title = title
-            // Нет контента, выходим
+            self.contentView.resetAppearance()
+            // Нет содержимого, метка остаётся скрытой
             if self.contentView.isHidden {
                 self.alpha = 1.0
                 return
             }
-            
-            UIView.animate(withDuration: 0.35) {
+
+            UIView.animate(withDuration: self.animationDuration) {
                 self.alpha = 1.0
             }
         } else {
-            self.replaceContent(with: image, title: title)
+            self.replaceContent(with: image, title: title, sequence: sequence)
         }
     }
     /**
@@ -367,33 +411,43 @@ open class LabelView: UIStackView {
 
      Текущие изображение и текст растворяются, затем
      устанавливаются новые и проявляются.
+
+     - Parameter image: Новое изображение.
+     - Parameter title: Новый текст.
+     - Parameter sequence: Идентификатор последовательности анимаций,
+       в рамках которой выполняется замена.
      */
-    private func replaceContent(with image: UIImage?, title: String?) {
+    private func replaceContent(
+        with image: UIImage?,
+        title: String?,
+        sequence: Int
+    ) {
         if self.isActivityAnimating {
-            UIView.animate(withDuration: 0.3) {
+            UIView.animate(withDuration: self.animationDuration) {
                 self.contentView.alpha = 0.0
                 self.contentView.transform = self.scaleTransform
             } completion: { finished in
-                guard finished else { return }
-                UIView.animate(withDuration: 0.35) {
+                guard finished, sequence == self.animationSequence else { return }
+                UIView.animate(withDuration: self.animationDuration) {
                     self.image = image
                     self.title = title
                     self.layoutIfNeeded()
-                } completion: { _ in
-                    UIView.animate(withDuration: 0.35) {
+                } completion: { finished in
+                    guard finished, sequence == self.animationSequence else { return }
+                    UIView.animate(withDuration: self.animationDuration) {
                         self.contentView.resetAppearance()
                     }
                 }
             }
         } else {
-            UIView.animate(withDuration: 0.3) {
+            UIView.animate(withDuration: self.animationDuration) {
                 self.alpha = 0.0
                 self.transform = self.scaleTransform
             } completion: { finished in
-                guard finished else { return }
+                guard finished, sequence == self.animationSequence else { return }
                 self.image = image
                 self.title = title
-                UIView.animate(withDuration: 0.35) {
+                UIView.animate(withDuration: self.animationDuration) {
                     self.alpha = 1.0
                     self.transform = .identity
                 }
@@ -410,9 +464,14 @@ open class LabelView: UIStackView {
        Значение по умолчанию — `false`.
      */
     public func hide(animated: Bool = false) {
+        let sequence = self.beginAnimationSequence()
+
         guard animated else {
             self.clear()
+            self.contentView.resetAppearance()
             self.activityView.stopAnimating()
+            self.alpha = 1.0
+            self.transform = .identity
             self.isHidden = true
             return
         }
@@ -422,11 +481,13 @@ open class LabelView: UIStackView {
             return
         }
 
-        UIView.animate(withDuration: 0.25) {
+        UIView.animate(withDuration: self.animationDuration) {
             self.alpha = 0.0
-        } completion: { _ in
+        } completion: { finished in
+            guard finished, sequence == self.animationSequence else { return }
             self.isHidden = true
             self.alpha = 1.0
+            self.transform = .identity
             self.clear()
             self.activityView.stopAnimating()
         }
