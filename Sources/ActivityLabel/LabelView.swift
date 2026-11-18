@@ -382,8 +382,8 @@ open class LabelView: UIStackView {
         guard !self.activityView.isAnimating || self.activityView.alpha != 1.0 else { return }
         let sequence = self.beginAnimationSequence()
 
+        self.isHidden = false
         if self.contentView.isHidden {
-            self.isHidden = false
             self.alpha = 0.0
             self.transform = .identity
             self.activityView.alpha = 1.0
