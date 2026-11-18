@@ -172,6 +172,10 @@ open class LabelView: UIStackView {
      Стек содержимого из изображения и текста.
      */
     private(set) var contentView: LabelContentView!
+    /**
+     Трансформер масштаба.
+     */
+    private var scaleTransform = CGAffineTransform(scaleX: 0.75, y: 0.75)
 
     /**
      Создает экземпляр `LabelView` с изображением и заголовком.
@@ -335,10 +339,7 @@ open class LabelView: UIStackView {
     private func replaceContent(with image: UIImage?, title: String?) {
         UIView.animate(withDuration: 0.3) {
             self.contentView.alpha = 0.0
-            self.contentView.transform = CGAffineTransform(
-                scaleX: 0.75,
-                y: 0.75
-            )
+            self.contentView.transform = self.scaleTransform
         } completion: { finished in
             guard finished else { return }
             self.image = image
@@ -373,10 +374,7 @@ open class LabelView: UIStackView {
 
         UIView.animate(withDuration: 0.25) {
             self.alpha = 0.0
-            self.contentView.transform = CGAffineTransform(
-                scaleX: 0.75,
-                y: 0.75
-            )
+            self.transform = self.scaleTransform
         } completion: { _ in
             self.isHidden = true
             self.alpha = 1.0
