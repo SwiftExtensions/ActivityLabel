@@ -29,14 +29,20 @@ class LabelContentView: UIStackView {
      */
     var image: UIImage? {
         get { self.imageView.image }
-        set { self.imageView.image = newValue }
+        set {
+            self.imageView.image = newValue
+            self.imageView.isHidden = newValue == nil
+        }
     }
     /**
      Текст метки для отображения в `label`.
      */
     var title: String? {
         get { self.label.text }
-        set { self.label.text = newValue }
+        set {
+            self.label.text = newValue
+            self.label.isHidden = newValue == nil
+        }
     }
 
     /**
