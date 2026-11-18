@@ -326,6 +326,7 @@ open class LabelView: UIStackView {
 
         if self.isHidden {
             self.alpha = 0.0
+            self.isHidden = false
             self.image = image
             self.title = title
             // Нет контента, выходим
@@ -334,7 +335,6 @@ open class LabelView: UIStackView {
                 return
             }
             
-            self.isHidden = false
             UIView.animate(withDuration: 0.35) {
                 self.alpha = 1.0
             }
