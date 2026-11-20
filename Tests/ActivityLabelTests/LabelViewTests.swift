@@ -160,6 +160,29 @@ final class LabelViewTests: XCTestCase {
         XCTAssertFalse(labelView.activityView.isHidden)
     }
     /**
+     Проверяет, что остановка индикатора во время анимированного
+     отображения содержимого не приводит к скрытию метки.
+
+     Воспроизводит гонку: метка отображает только индикатор,
+     начинается анимированное отображение содержимого, а
+     остановка индикатора приходит до установки содержимого.
+     */
+    func testStopActivityDuringShowKeepsLabelVisible() {
+        let labelView = self.makeLabelView()
+        labelView.isHidden = true
+
+        labelView.startActivityAnimating()
+        labelView.show(image: nil, title: "Ошибка", animated: true)
+        labelView.stopActivityAnimating()
+
+        self.waitForAnimations()
+
+        XCTAssertFalse(labelView.isHidden)
+        XCTAssertFalse(labelView.activityView.isAnimating)
+        XCTAssertTrue(labelView.activityView.isHidden)
+        XCTAssertEqual(labelView.title, "Ошибка")
+    }
+    /**
      Проверяет, что скрытие содержимого не влияет
      на индикатор и саму метку.
      */
