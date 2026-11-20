@@ -112,6 +112,10 @@ final class ViewController: UIViewController {
             self.makeButton(title: "Старт индикатор", action: #selector(self.startActivity)),
             self.makeButton(title: "Стоп индикатор", action: #selector(self.stopActivity))
         )
+        let contentRow = self.makeRow(
+            self.makeButton(title: "Показать контент", action: #selector(self.showContent)),
+            self.makeButton(title: "Скрыть контент", action: #selector(self.hideContent))
+        )
         let contentButton = self.makeButton(
             title: "Сменить содержимое",
             action: #selector(self.changeContent)
@@ -122,6 +126,7 @@ final class ViewController: UIViewController {
             backgroundRow,
             showHideRow,
             activityRow,
+            contentRow,
             contentButton
         ])
         stackView.axis = .vertical
@@ -259,6 +264,18 @@ final class ViewController: UIViewController {
      */
     @objc private func stopActivity() {
         self.labelView.stopActivityAnimating()
+    }
+    /**
+     Отображает содержимое метки без влияния на индикатор.
+     */
+    @objc private func showContent() {
+        self.showLabel()
+    }
+    /**
+     Скрывает содержимое метки без влияния на индикатор.
+     */
+    @objc private func hideContent() {
+        self.labelView.hideContent(animated: self.animatedSwitch.isOn)
     }
     /**
      Переключает содержимое метки на следующий вариант.
