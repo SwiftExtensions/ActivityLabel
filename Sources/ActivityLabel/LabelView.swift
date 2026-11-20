@@ -48,45 +48,6 @@ import UIKit
  */
 open class LabelView: UIStackView {
     /**
-     Намерение отображения метки.
-
-     Фиксирует последнюю команду видимости: завершение
-     анимации применяет `isHidden`, только если намерение
-     за время анимации не изменилось.
-     */
-    private enum VisibilityIntent {
-        /**
-         Метка должна отображаться.
-         */
-        case show
-        /**
-         Метка должна быть скрыта.
-         */
-        case hide
-
-
-    }
-    /**
-     Намерение состояния ``activityView``.
-
-     Завершение анимации индикатора продолжает цепочку,
-     только если требуемое состояние за время анимации
-     не изменилось.
-     */
-    private enum ActivityIntent {
-        /**
-         Индикатор должен анимироваться.
-         */
-        case animating
-        /**
-         Индикатор должен быть остановлен.
-         */
-        case stopped
-
-
-    }
-    
-    /**
      Класс слоя метки — `CALayer` вместо `CATransformLayer` `UIStackView`.
 
      Замена позволяет слою рисовать оформление ``background``:
@@ -135,6 +96,7 @@ open class LabelView: UIStackView {
         set {
             self.contentView.image = newValue
             self.contentView.isHidden = newValue == nil && self.title.isEmpty
+            self.state.updateContent(isHidden: self.contentView.isHidden)
         }
     }
     /**
@@ -158,6 +120,7 @@ open class LabelView: UIStackView {
         set {
             self.contentView.title = newValue
             self.contentView.isHidden = newValue.isEmpty && self.image == nil
+            self.state.updateContent(isHidden: self.contentView.isHidden)
         }
     }
     /**
@@ -269,21 +232,9 @@ open class LabelView: UIStackView {
      */
     public var animationDuration: TimeInterval = 0.3
     /**
-     Идентификатор текущей последовательности анимаций содержимого метки.
-
-     Увеличивается при каждой новой команде отображения,
-     чтобы обработчики завершения прерванных цепочек
-     не вмешивались в текущее состояние метки.
+     Состояние отображения метки.
      */
-    private var contentAnimationSequence = 0
-    /**
-     Текущее намерение отображения метки.
-     */
-    private var visibilityIntent: VisibilityIntent = .show
-    /**
-     Текущее намерение состояния ``activityView``.
-     */
-    private var activityIntent: ActivityIntent = .stopped
+    private var state = State()
 
     /**
      Создает экземпляр `LabelView` с изображением и заголовком.
@@ -413,26 +364,12 @@ open class LabelView: UIStackView {
         }
     }
     /**
-     Начинает новую последовательность анимаций содержимого метки.
-
-     Обработчики завершения предыдущей последовательности
-     перестают учитываться: проверка идентификатора
-     внутри `completion` не пройдёт.
-
-     - Returns: Идентификатор начатой последовательности.
-     */
-    private func beginContentAnimationSequence() -> Int {
-        self.contentAnimationSequence += 1
-        return self.contentAnimationSequence
-    }
-    /**
      Запускает анимацию ``activityView`` и отображает метку.
      */
     public func startActivityAnimating() {
         guard !self.activityView.isAnimating || self.activityView.alpha != 1.0 else { return }
 
-        self.visibilityIntent = .show
-        self.activityIntent = .animating
+        self.state.startActivityAnimating()
         self.isHidden = false
         if self.contentView.isHidden {
             self.alpha = 0.0
@@ -447,7 +384,7 @@ open class LabelView: UIStackView {
             UIView.animate(withDuration: self.animationDuration) {
                 self.activityView.startAnimating()
             } completion: { _ in
-                guard self.activityIntent == .animating else { return }
+                guard self.state.activityIntent == .animating else { return }
                 UIView.animate(withDuration: self.animationDuration) {
                     self.activityView.alpha = 1.0
                 }
@@ -462,19 +399,19 @@ open class LabelView: UIStackView {
      */
     public func stopActivityAnimating() {
         guard self.activityView.isAnimating else { return }
-        self.activityIntent = .stopped
+        self.state.stopActivityAnimating()
 
-        if self.contentView.isHidden {
-            self.visibilityIntent = .hide
+        if self.state.contentIntent == .empty {
             UIView.animate(withDuration: self.animationDuration) {
                 self.alpha = 0.0
             } completion: { _ in
-                guard self.activityIntent == .stopped else { return }
+                guard self.state.activityIntent == .stopped else { return }
                 self.activityView.stopAnimating()
                 // За время затухания могла прийти команда на показ:
                 // метку прячем, только если скрытие по-прежнему
-                // требуется.
-                if self.visibilityIntent == .hide {
+                // требуется и содержимое не ожидается.
+                if self.state.visibilityIntent == .hide,
+                   self.state.contentIntent == .empty {
                     self.isHidden = true
                 }
                 self.alpha = 1.0
@@ -483,11 +420,11 @@ open class LabelView: UIStackView {
             UIView.animate(withDuration: self.animationDuration) {
                 self.activityView.alpha = 0.0
             } completion: { _ in
-                guard self.activityIntent == .stopped else { return }
+                guard self.state.activityIntent == .stopped else { return }
                 UIView.animate(withDuration: self.animationDuration) {
                     self.activityView.stopAnimating()
                 } completion: { _ in
-                    guard self.activityIntent == .stopped else { return }
+                    guard self.state.activityIntent == .stopped else { return }
                     self.activityView.alpha = 1.0
                 }
             }
@@ -510,8 +447,7 @@ open class LabelView: UIStackView {
         title: String?,
         animated: Bool = false
     ) {
-        let sequence = self.beginContentAnimationSequence()
-        self.visibilityIntent = .show
+        let sequence = self.state.show(image: image, title: title)
 
         guard animated else {
             self.image = image
@@ -588,13 +524,13 @@ open class LabelView: UIStackView {
                 self.contentView.alpha = 0.0
                 self.contentView.transform = self.scaleTransform
             } completion: { _ in
-                guard sequence == self.contentAnimationSequence else { return }
+                guard sequence == self.state.contentAnimationSequence else { return }
                 UIView.animate(withDuration: self.animationDuration) {
                     self.image = image
                     self.title = title
                     self.layoutIfNeeded()
                 } completion: { _ in
-                    guard sequence == self.contentAnimationSequence else { return }
+                    guard sequence == self.state.contentAnimationSequence else { return }
                     UIView.animate(withDuration: self.animationDuration) {
                         self.contentView.resetAppearance()
                     }
@@ -605,7 +541,7 @@ open class LabelView: UIStackView {
                 self.alpha = 0.0
                 self.transform = self.scaleTransform
             } completion: { _ in
-                guard sequence == self.contentAnimationSequence else { return }
+                guard sequence == self.state.contentAnimationSequence else { return }
                 self.image = image
                 self.title = title
                 UIView.animate(withDuration: self.animationDuration) {
@@ -625,8 +561,7 @@ open class LabelView: UIStackView {
        Значение по умолчанию — `false`.
      */
     public func hide(animated: Bool = false) {
-        let sequence = self.beginContentAnimationSequence()
-        self.visibilityIntent = .hide
+        let sequence = self.state.hide()
 
         guard animated else {
             self.clear()
@@ -646,17 +581,17 @@ open class LabelView: UIStackView {
         UIView.animate(withDuration: self.animationDuration) {
             self.alpha = 0.0
         } completion: { _ in
-            guard sequence == self.contentAnimationSequence else { return }
+            guard sequence == self.state.contentAnimationSequence else { return }
             self.alpha = 1.0
             self.transform = .identity
             // За время затухания могла прийти команда на показ:
             // метку прячем и очищаем, только если скрытие
             // по-прежнему требуется.
-            if self.visibilityIntent == .hide {
+            if self.state.visibilityIntent == .hide {
                 self.isHidden = true
                 self.clear()
             }
-            if self.activityIntent == .stopped {
+            if self.state.activityIntent == .stopped {
                 self.activityView.stopAnimating()
             }
         }
@@ -672,7 +607,7 @@ open class LabelView: UIStackView {
        Значение по умолчанию — `false`.
      */
     public func hideContent(animated: Bool = false) {
-        let sequence = self.beginContentAnimationSequence()
+        let sequence = self.state.hideContent()
 
         guard animated, !self.contentView.isHidden else {
             self.clear()
@@ -684,7 +619,7 @@ open class LabelView: UIStackView {
             self.contentView.alpha = 0.0
             self.contentView.transform = self.scaleTransform
         } completion: { _ in
-            guard sequence == self.contentAnimationSequence else { return }
+            guard sequence == self.state.contentAnimationSequence else { return }
             self.clear()
             self.contentView.resetAppearance()
         }
