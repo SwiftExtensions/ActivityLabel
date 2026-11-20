@@ -92,7 +92,11 @@ labelView.show(imageSystemName: "pause.circle.fill", title: "Пауза", animat
 // Скрыть
 labelView.hide(animated: true)
 
-// Индикатор загрузки
+// Скрыть только содержимое: индикатор и метка остаются видимыми
+labelView.hideContent(animated: true)
+
+// Индикатор загрузки: показывает метку, после остановки
+// пустая метка скрывается
 labelView.startActivityAnimating()
 labelView.stopActivityAnimating()
 
